@@ -1,83 +1,73 @@
-import Card from "../components/Card";
-import Button from "../components/Button";
+import { NavLink, Outlet } from "react-router-dom";
 
 function DashboardPage() {
   return (
-    <div className="space-y-8">
+    <div className="min-h-screen flex bg-gray-100">
 
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-semibold text-gray-800">
-          Dashboard
+      {/* Sidebar */}
+      <aside className="w-64 bg-white border-r border-gray-200 p-6 space-y-6">
+
+        <h2 className="text-xl font-semibold text-gray-800">
+          CoRide
         </h2>
-        <p className="text-gray-600">
-          Manage your rides and find new ride matches.
-        </p>
-      </div>
 
-      {/* Quick Actions */}
-      <div className="grid md:grid-cols-2 gap-6">
+        <nav className="flex flex-col gap-2 text-sm">
 
-        <Card title="Offer a Ride">
-          <p className="text-gray-600 mb-4">
-            Traveling somewhere? Offer a ride and share travel costs with another student.
-          </p>
+          <NavLink
+            to="/dashboard"
+            end
+            className={({ isActive }) =>
+              `p-2 rounded ${
+                isActive ? "bg-gray-200 font-medium" : "text-gray-600"
+              }`
+            }
+          >
+            Dashboard
+          </NavLink>
 
-          <Button>
+          <NavLink
+            to="/dashboard/offer"
+            className={({ isActive }) =>
+              `p-2 rounded ${
+                isActive ? "bg-gray-200 font-medium" : "text-gray-600"
+              }`
+            }
+          >
             Offer Ride
-          </Button>
-        </Card>
+          </NavLink>
 
-        <Card title="Find a Ride">
-          <p className="text-gray-600 mb-4">
-            Search available rides offered by other students.
-          </p>
-
-          <Button variant="secondary">
+          <NavLink
+            to="/dashboard/find"
+            className={({ isActive }) =>
+              `p-2 rounded ${
+                isActive ? "bg-gray-200 font-medium" : "text-gray-600"
+              }`
+            }
+          >
             Find Ride
-          </Button>
-        </Card>
+          </NavLink>
 
-      </div>
+          <NavLink
+            to="/dashboard/myrides"
+            className={({ isActive }) =>
+              `p-2 rounded ${
+                isActive ? "bg-gray-200 font-medium" : "text-gray-600"
+              }`
+            }
+          >
+            My Rides
+          </NavLink>
 
-      {/* Available Rides Preview */}
-      <Card title="Available Rides">
+        </nav>
 
-        <div className="space-y-4">
+      </aside>
 
-          <div className="border border-gray-200 rounded-md p-4 flex justify-between items-center">
-            <div>
-              <p className="font-medium text-gray-800">
-                Campus → City Center
-              </p>
-              <p className="text-sm text-gray-600">
-                Departure: Today 5:30 PM
-              </p>
-            </div>
+      {/* Main Content */}
+      <main className="flex-1 p-8">
 
-            <Button variant="secondary">
-              View
-            </Button>
-          </div>
+        <Outlet />
 
-          <div className="border border-gray-200 rounded-md p-4 flex justify-between items-center">
-            <div>
-              <p className="font-medium text-gray-800">
-                University Gate → Metro Station
-              </p>
-              <p className="text-sm text-gray-600">
-                Departure: Tomorrow 9:00 AM
-              </p>
-            </div>
-
-            <Button variant="secondary">
-              View
-            </Button>
-          </div>
-
-        </div>
-
-      </Card>
+      </main>
 
     </div>
   );
