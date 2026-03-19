@@ -48,3 +48,27 @@ export const getAvailableRides = async () => {
   const res = await api.get("/v1/rides");
   return res.data;
 };
+
+// Leave Ride
+export const leaveRide = async (rideId) => {
+  const res = await api.delete(`/v1/rides/${rideId}/leave`);
+  return res.data;
+};
+
+// Cancel Ride
+export const cancelRide = async (rideId) => {
+  const res = await api.patch(`/v1/rides/${rideId}/cancel`);
+  return res.data;
+};
+
+// Complete Ride
+export const completeRide = async (rideId) => {
+  const res = await api.post(`/v1/rides/${rideId}/complete`);
+  return res.data;
+};
+
+// Delete Ride
+export const deleteRide = async (rideId) => {
+  const res = await api.delete(`/v1/rides/${rideId}`);
+  return res.data;
+};

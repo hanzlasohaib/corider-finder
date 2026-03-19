@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { loginUser } from "../api/authService";
 import { useAuth } from "../context/AuthContext";
@@ -33,7 +34,7 @@ function LoginPage() {
   
         navigate("/dashboard");
       } catch (error) {
-        alert("Invalid credentials");
+        toast.error("Invalid credentials");
       }
     };
 
@@ -45,13 +46,15 @@ function LoginPage() {
         <form className="space-y-4" onSubmit={handleSubmit}>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
               Email
             </label>
 
             <input
+              id="email"
               name="email"
               type="email"
+              autoComplete="on"
               placeholder="student@email.com"
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -59,11 +62,12 @@ function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
               Password
             </label>
 
             <input
+              id="password"
               name="password"
               type="password"
               placeholder="Enter password"

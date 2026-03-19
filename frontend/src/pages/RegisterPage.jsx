@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import Card from "../components/Card";
 import Button from "../components/Button";
@@ -30,11 +31,11 @@ function RegisterPage() {
       try {
         await registerUser(form);
   
-        alert("Registration successful");
+        toast.success("Registration successful");
   
         navigate("/login");
       } catch (error) {
-        alert("Registration failed");
+        toast.error("Registration failed");
       }
     };
   
@@ -47,13 +48,15 @@ function RegisterPage() {
         <form className="space-y-4" onSubmit={handleSubmit}>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-1">
               Full Name
             </label>
 
             <input
+              id="full_name"
               name="full_name"
               type="text"
+              autoComplete="on"
               placeholder="Enter full name"
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -61,13 +64,15 @@ function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="university" className="block text-sm font-medium text-gray-700 mb-1">
               University
             </label>
 
             <input
+              id="university"
               name="university"
               type="text"
+              autoComplete="on"
               placeholder="Your university"
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -75,13 +80,15 @@ function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
               Email
             </label>
 
             <input
+              id="email"
               name="email"
               type="email"
+              autoComplete="on"
               placeholder="student@email.com"
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -89,13 +96,15 @@ function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
               Phone
             </label>
 
             <input
+              id="phone"
               name="phone"
               type="text"
+              autoComplete="on"
               placeholder="03XXXXXXXXX"
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -103,13 +112,15 @@ function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
               Password
             </label>
 
             <input
+              id="password"
               name="password"
               type="password"
+              autoComplete="off"
               placeholder="Create password"
               onChange={handleChange}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
