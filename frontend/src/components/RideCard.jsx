@@ -1,7 +1,6 @@
 import Button from "./Button";
 
-function 
-RideCard({ ride, onJoin }) {
+function RideCard({ ride, onJoin, joinedAt }) {
   return (
     <div className="border border-gray-200 rounded-md p-4 flex justify-between items-center">
 
@@ -17,8 +16,16 @@ RideCard({ ride, onJoin }) {
         <p className="text-sm text-gray-600">
           Seats: {ride.available_seat} | Price: Rs {ride.fare}
         </p>
+
+        {/* Show joined timestamp if available */}
+        {joinedAt && (
+          <p className="text-sm text-gray-500">
+            Joined At: {new Date(joinedAt).toLocaleString()}
+          </p>
+        )}
       </div>
 
+      {/* Show Join button only if onJoin prop exists */}
       {onJoin && (
         <Button variant="secondary" onClick={() => onJoin(ride.id)}>
           Join

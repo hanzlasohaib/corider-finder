@@ -38,3 +38,10 @@ class UserResponse(UserBase):
 
     model_config = ConfigDict(from_attributes=True)
 
+
+class UserBasicResponse(BaseModel):
+    id: UUID
+    full_name: str
+    email: EmailStr
+
+    model_config = ConfigDict(from_attributes=True)

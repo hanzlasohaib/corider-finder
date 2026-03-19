@@ -9,6 +9,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
+from app.models.user import User
+from app.models.ride_offer import RideOffer
 
 class RideParticipant(Base):
     __tablename__ = "ride_participants"

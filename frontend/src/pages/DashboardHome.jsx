@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getMyCreatedRides, getMyJoinedRides, searchRides } from "../api/rideService";
+import {
+  getMyCreatedRides,
+  getMyJoinedRides,
+  getAvailableRides,
+} from "../api/rideService";
+
 import RideCard from "../components/RideCard";
 import Button from "../components/Button";
 
@@ -10,6 +15,7 @@ function DashboardHome() {
   const [rides, setRides] = useState([]);
   const [createdCount, setCreatedCount] = useState(0);
   const [joinedCount, setJoinedCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
@@ -17,14 +23,20 @@ function DashboardHome() {
         // Fetch user's rides
         const created = await getMyCreatedRides();
         const joined = await getMyJoinedRides();
+
         setCreatedCount(created.length);
         setJoinedCount(joined.length);
 
-        // Fetch available rides (general search)
-        const available = await searchRides("", "");
-        setRides(available);
+        // Fetch ALL available rides
+        const available = await getAvailableRides();
+
+        // Optional: show only first 5
+        setRides(available.slice(0, 5));
+
       } catch (err) {
-        console.error(err);
+        console.error("Dashboard error:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -48,27 +60,47 @@ function DashboardHome() {
           <p className="text-gray-500">Created Rides</p>
           <p className="text-2xl font-bold">{createdCount}</p>
         </div>
+
         <div className="p-4 bg-white border rounded shadow text-center">
           <p className="text-gray-500">Joined Rides</p>
           <p className="text-2xl font-bold">{joinedCount}</p>
         </div>
+
         <div className="p-4 bg-white border rounded shadow text-center">
-          <Button onClick={() => navigate("/dashboard/offer")}>Offer Ride</Button>
+          <Button onClick={() => navigate("/dashboard/offer")}>
+            Offer Ride
+          </Button>
         </div>
+
         <div className="p-4 bg-white border rounded shadow text-center">
-          <Button onClick={() => navigate("/dashboard/find")}>Find Ride</Button>
+          <Button onClick={() => navigate("/dashboard/find")}>
+            Find Ride
+          </Button>
         </div>
       </div>
 
       {/* Available Rides */}
       <div>
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Available Rides</h3>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          Available Rides
+        </h3>
+
         <div className="space-y-4">
-          {rides.length === 0 ? (
-            <p className="text-gray-500">No rides available at the moment.</p>
+
+          {loading ? (
+            <p className="text-gray-500">Loading rides...</p>
+
+          ) : rides.length === 0 ? (
+            <p className="text-gray-500">
+              No rides available at the moment.
+            </p>
+
           ) : (
-            rides.map((ride) => <RideCard key={ride.id} ride={ride} />)
+            rides.map((ride) => (
+              <RideCard key={ride.id} ride={ride} />
+            ))
           )}
+
         </div>
       </div>
 

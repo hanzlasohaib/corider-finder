@@ -42,3 +42,9 @@ export const getMyJoinedRides = async () => {
   const res = await api.get("/v1/rides/user/joined");
   return res.data;
 };
+
+// Available Rides
+export const getAvailableRides = async () => {
+  const res = await api.get("/v1/rides");
+  return res.data;
+};

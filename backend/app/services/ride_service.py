@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List, Optional
 from uuid import UUID
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.ride_offer import RideOffer
 from app.models.ride_participant import RideParticipant
@@ -66,6 +66,7 @@ def list_available_rides(
 
     return (
         db.query(RideOffer)
+        .options(joinedload(RideOffer.driver))
         .filter(
             RideOffer.status == "active",
             RideOffer.available_seat > 0,
@@ -198,6 +199,7 @@ def join_ride(db: Session, ride_id: UUID, user: User) -> RideParticipant:
 
     ride = (
         db.query(RideOffer)
+        .options(joinedload(RideOffer.driver))
         .filter(RideOffer.id == ride_id)
         .with_for_update()
         .first()
@@ -315,6 +317,9 @@ def list_user_created_rides(db: Session, user: User) -> List[RideOffer]:
 
 def list_user_joined_rides(db: Session, user: User) -> List[RideParticipant]:
 
-    return db.query(RideParticipant).filter(
-        RideParticipant.user_id == user.id
-    ).all()
+    return (
+        db.query(RideParticipant)
+        .options(joinedload(RideParticipant.ride).joinedload(RideOffer.driver))
+        .filter(RideParticipant.user_id == user.id)
+        .all()
+    )
