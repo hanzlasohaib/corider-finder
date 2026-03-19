@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 from pydantic import ConfigDict
 
+from app.schemas.user import UserBasicResponse
 
 class RideCreate(BaseModel):
     pickup_location: str = Field(..., min_length=1, max_length=255)
@@ -27,6 +28,8 @@ class RideResponse(BaseModel):
     available_seat: int
     status: str
 
+    driver: UserBasicResponse
+
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -36,8 +39,15 @@ class RideJoinResponse(BaseModel):
     user_id: UUID
     joined_at: datetime
 
+    ride: RideResponse
+
     model_config = ConfigDict(from_attributes=True)
 
+class JoinedRideResponse(BaseModel):
+    ride: RideResponse
+    joined_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 class RideUpdate(BaseModel):
     pickup_location: str | None = Field(None, min_length=1, max_length=255)

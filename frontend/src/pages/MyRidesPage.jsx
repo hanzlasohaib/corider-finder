@@ -38,9 +38,9 @@ function MyRidesPage() {
       <div>
         <h3 className="font-medium mb-2">Joined Rides</h3>
         <div className="space-y-4">
-          {joinedRides.map((ride) => (
-            <RideCard key={ride.id} ride={ride} />
-          ))}
+        {joinedRides.map((joined) => (
+          <RideCard key={joined.id} ride={joined.ride} joinedAt={joined.joined_at} />
+))}
         </div>
       </div>
 

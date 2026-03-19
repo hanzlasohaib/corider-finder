@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.security import get_current_user
 from app.db.session import get_db
 from app.models.user import User
-from app.schemas.ride import RideCreate, RideResponse, RideJoinResponse
+from app.schemas.ride import RideCreate, RideResponse, RideJoinResponse, JoinedRideResponse
 from app.services.ride_service import (
     RideAlreadyJoinedError,
     RideFullError,
@@ -23,6 +23,7 @@ from app.services.ride_service import (
     find_matching_rides,
     get_ride_by_id,
     join_ride,
+    
     leave_ride,
     list_available_rides,
     list_user_created_rides,
@@ -278,11 +279,21 @@ def list_user_created_rides_endpoint(
 # User Joined Rides
 # =========================
 
-@router.get("/user/joined", response_model=List[RideJoinResponse])
+@router.get("/user/joined", response_model=List[JoinedRideResponse])
 def list_user_joined_rides_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> List[RideJoinResponse]:
+) -> List[JoinedRideResponse]:
 
     rides = list_user_joined_rides(db, current_user)
-    return [RideJoinResponse.model_validate(r) for r in rides]
+
+    return [
+        JoinedRideResponse(
+            id=r.id,
+            ride_id=r.ride_id,
+            user_id=r.user_id,
+            joined_at=r.joined_at,
+            ride=RideResponse.model_validate(r.ride),
+        )
+        for r in rides
+    ]
