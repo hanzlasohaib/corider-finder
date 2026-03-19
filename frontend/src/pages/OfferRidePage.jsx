@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import { createRide } from "../api/rideService";
 import Card from "../components/Card";
 import Button from "../components/Button";
@@ -25,10 +26,10 @@ function OfferRidePage() {
 
     try {
       await createRide(form);
-      alert("Ride created successfully");
+      toast.success("Ride created successfully");
     } catch (err) {
       console.error(err);
-      alert("Failed to create ride");
+      toast.error("Failed to create ride");
     }
   };
 
@@ -37,42 +38,77 @@ function OfferRidePage() {
 
       <form onSubmit={handleSubmit} className="space-y-4">
 
-        <input
-          name="from_location"
-          placeholder="From"
-          onChange={handleChange}
-          className="w-full border rounded p-2"
-        />
+      <div>
+  <label htmlFor="pickup_location" className="block text-sm font-medium">
+    From
+  </label>
+  <input
+    id="pickup_location"
+    name="pickup_location"
+    autoComplete="on"
+    placeholder="From"
+    onChange={handleChange}
+    className="w-full border rounded p-2"
+  />
+</div>
 
-        <input
-          name="to_location"
-          placeholder="To"
-          onChange={handleChange}
-          className="w-full border rounded p-2"
-        />
+<div>
+  <label htmlFor="destination" className="block text-sm font-medium">
+    To
+  </label>
+  <input
+    id="destination"
+    name="destination"
+    autoComplete="on"
+    placeholder="To"
+    onChange={handleChange}
+    className="w-full border rounded p-2"
+  />
+</div>
 
-        <input
-          type="datetime-local"
-          name="departure_time"
-          onChange={handleChange}
-          className="w-full border rounded p-2"
-        />
+<div>
+  <label htmlFor="departure_time" className="block text-sm font-medium">
+    Departure Time
+  </label>
+  <input
+    id="departure_time"
+    type="datetime-local"
+    name="departure_time"
+    autoComplete="on"
+    onChange={handleChange}
+    className="w-full border rounded p-2"
+  />
+</div>
 
-        <input
-          type="number"
-          name="available_seats"
-          placeholder="Seats"
-          onChange={handleChange}
-          className="w-full border rounded p-2"
-        />
+<div>
+  <label htmlFor="available_seat" className="block text-sm font-medium">
+    Seats
+  </label>
+  <input
+    id="available_seat"
+    type="number"
+    name="available_seat"
+    autoComplete="on"
+    placeholder="Seats"
+    onChange={handleChange}
+    className="w-full border rounded p-2"
+  />
+</div>
 
-        <input
-          type="number"
-          name="price"
-          placeholder="Price"
-          onChange={handleChange}
-          className="w-full border rounded p-2"
-        />
+<div>
+  <label htmlFor="fare" className="block text-sm font-medium">
+    Price
+  </label>
+  <input
+    id="fare"
+    type="number"
+    name="fare"
+    autoComplete="on"
+    placeholder="Price"
+    onChange={handleChange}
+    className="w-full border rounded p-2"
+  />
+</div>
 
         <Button onClick={handleSubmit}>
           Create Ride

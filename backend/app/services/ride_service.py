@@ -60,6 +60,7 @@ def create_ride(db: Session, driver: User, ride_in: RideCreate) -> RideOffer:
 
 def list_available_rides(
     db: Session,
+    current_user: User,
     skip: int = 0,
     limit: int = 20,
 ) -> List[RideOffer]:
@@ -70,6 +71,7 @@ def list_available_rides(
         .filter(
             RideOffer.status == "active",
             RideOffer.available_seat > 0,
+            RideOffer.driver_id != current_user.id,  # <--- exclude own rides
         )
         .order_by(RideOffer.departure_time.asc())
         .offset(skip)
@@ -281,18 +283,18 @@ def leave_ride(db: Session, ride_id: UUID, user: User) -> RideParticipant:
 
 def find_matching_rides(
     db: Session,
+    current_user: User,
     pickup: Optional[str] = None,
     destination: Optional[str] = None,
 ) -> List[RideOffer]:
 
     if not pickup and not destination:
-        raise RideMatchCriteriaError(
-            "At least one of 'pickup' or 'destination' must be provided"
-        )
+        return list_available_rides(db, current_user)
 
     query = db.query(RideOffer).filter(
         RideOffer.status == "active",
         RideOffer.available_seat > 0,
+        RideOffer.driver_id != current_user.id,  # EXCLUDE OWN RIDES
     )
 
     if pickup:

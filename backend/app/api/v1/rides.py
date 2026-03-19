@@ -23,7 +23,6 @@ from app.services.ride_service import (
     find_matching_rides,
     get_ride_by_id,
     join_ride,
-    
     leave_ride,
     list_available_rides,
     list_user_created_rides,
@@ -56,9 +55,10 @@ def list_rides_endpoint(
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> List[RideResponse]:
 
-    rides = list_available_rides(db, skip=skip, limit=limit)
+    rides = list_available_rides(db, current_user=current_user, skip=skip, limit=limit)
 
     return [RideResponse.model_validate(r) for r in rides]
 
@@ -72,10 +72,11 @@ def match_rides_endpoint(
     pickup: Optional[str] = Query(default=None),
     destination: Optional[str] = Query(default=None),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> List[RideResponse]:
 
     try:
-        rides = find_matching_rides(db, pickup=pickup, destination=destination)
+        rides = find_matching_rides(db, current_user=current_user, pickup=pickup, destination=destination)
     except RideMatchCriteriaError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

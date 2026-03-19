@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { searchRides, joinRide } from "../api/rideService";
+import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
+import { searchRides, joinRide, getMyJoinedRides } from "../api/rideService";
 import RideCard from "../components/RideCard";
 import Button from "../components/Button";
 
@@ -8,24 +9,43 @@ function FindRidePage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [rides, setRides] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [joinedRideIds, setJoinedRideIds] = useState([]);
 
   const handleSearch = async () => {
+
+    if (!from && !to) {
+      toast.error("Enter at least one field");
+      return;
+    }
+
     try {
-      const data = await searchRides(from, to); 
+      setLoading(true);
+      const data = await searchRides(from, to);
       setRides(data);
     } catch (err) {
       console.error(err);
-      alert("Failed to fetch rides");
+      toast.error("Failed to fetch rides");
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const loadJoined = async () => {
+      const joined = await getMyJoinedRides();
+      setJoinedRideIds(joined.map((j) => j.ride.id));
+    };
+    loadJoined();
+  }, []);
 
   const handleJoin = async (rideId) => {
     try {
       await joinRide(rideId);
-      alert("Joined ride");
+      toast.success("Joined ride");
     } catch (err) {
       console.error(err);
-      alert("Failed to join ride");
+      toast.error("Failed to join ride");
     }
   };
 
@@ -34,38 +54,62 @@ function FindRidePage() {
 
       <h2 className="text-xl font-semibold">Find Ride</h2>
 
-      <div className="flex gap-4">
+      <div className="flex gap-4 items-end">
 
-        <input
-          placeholder="From"
-          value={from} 
-          onChange={(e) => setFrom(e.target.value)}
-          className="border rounded p-2"
-        />
+        {/* From */}
+        <div className="flex flex-col">
+          <label htmlFor="pickup" className="text-sm font-medium text-gray-700">
+            From
+          </label>
+          <input
+            id="pickup"
+            name="pickup"
+            autoComplete="on"
+            placeholder="From"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="border rounded p-2"
+          />
+        </div>
 
-        <input
-          placeholder="To"
-          value={to} 
-          onChange={(e) => setTo(e.target.value)}
-          className="border rounded p-2"
-        />
+        {/* To */}
+        <div className="flex flex-col">
+          <label htmlFor="destination" className="text-sm font-medium text-gray-700">
+            To
+          </label>
+          <input
+            id="destination"
+            name="destination"
+            autoComplete="on"
+            placeholder="To"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className="border rounded p-2"
+          />
+        </div>
 
         <Button onClick={handleSearch}>
-          Search
+          {loading ? "Searching..." : "Search"}
         </Button>
 
       </div>
 
+      {/* Results */}
       <div className="space-y-4">
-
-        {rides.map((ride) => (
-          <RideCard
-            key={ride.id}
-            ride={ride}
-            onJoin={handleJoin}
-          />
-        ))}
-
+        {loading ? (
+          <p className="text-gray-500">Loading rides...</p>
+        ) : rides.length === 0 ? (
+          <p className="text-gray-500">No rides found</p>
+        ) : (
+          rides.map((ride) => (
+            <RideCard
+              key={ride.id}
+              ride={ride}
+              onJoin={handleJoin}
+              isJoined={joinedRideIds.includes(ride.id)}
+            />
+          ))
+        )}
       </div>
 
     </div>

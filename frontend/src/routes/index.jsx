@@ -10,6 +10,7 @@ import DashboardHome from "../pages/DashboardHome";
 import OfferRidePage from "../pages/OfferRidePage";
 import FindRidePage from "../pages/FindRidePage";
 import MyRidesPage from "../pages/MyRidesPage";
+import ProfilePage from "../pages/ProfilePage";
 import NotFound from "../pages/NotFound";
 
 import ProtectedRoute from "./ProtectedRoute";
@@ -80,6 +81,15 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ),
       },
+
+{
+  path: "/dashboard/profile",
+  element: (
+    <ProtectedRoute>
+      <ProfilePage />
+    </ProtectedRoute>
+  ),
+},
 
       { path: "*", element: <NotFound /> },
 

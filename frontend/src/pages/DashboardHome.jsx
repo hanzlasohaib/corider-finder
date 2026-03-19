@@ -5,6 +5,7 @@ import {
   getMyJoinedRides,
   getAvailableRides,
 } from "../api/rideService";
+import { getCurrentUser } from "../api/userService";
 
 import RideCard from "../components/RideCard";
 import Button from "../components/Button";
@@ -27,11 +28,9 @@ function DashboardHome() {
         setCreatedCount(created.length);
         setJoinedCount(joined.length);
 
-        // Fetch ALL available rides
-        const available = await getAvailableRides();
-
-        // Optional: show only first 5
-        setRides(available.slice(0, 5));
+        const currentUser = await getCurrentUser(); // your API call to /users/me
+        const available = await getAvailableRides(currentUser.id);
+        setRides(available);
 
       } catch (err) {
         console.error("Dashboard error:", err);
