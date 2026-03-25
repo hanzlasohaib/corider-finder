@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+
 from app.api import api_router
 from app.core.config import get_settings
 from app.core.exceptions import init_exception_handlers
