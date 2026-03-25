@@ -3,7 +3,17 @@ from __future__ import annotations
 from typing import List, Optional
 from uuid import UUID
 
+from sqlalchemy import update
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.exc import SQLAlchemyError
+
+from app.core.errors import (
+    RideNotFoundError,
+    RidePermissionError,
+    RideFullError,
+    RideAlreadyJoinedError,
+    RideMatchCriteriaError,
+)
 
 from app.models.ride_offer import RideOffer
 from app.models.ride_participant import RideParticipant
@@ -11,29 +21,36 @@ from app.models.user import User
 from app.schemas.ride import RideCreate, RideUpdate
 
 
-
 # =========================
-# Custom Exceptions
+# Helper: Active Ride Check
 # =========================
 
-class RideNotFoundError(Exception):
-    pass
+def user_has_active_ride(db: Session, user_id: UUID) -> bool:
+    # Check DRIVER role
+    driver_ride = (
+        db.query(RideOffer)
+        .filter(
+            RideOffer.driver_id == user_id,
+            RideOffer.status.notin_(["completed", "cancelled"])
+        )
+        .first()
+    )
 
+    if driver_ride:
+        return True
 
-class RidePermissionError(Exception):
-    pass
+    # Check PASSENGER role
+    passenger_ride = (
+        db.query(RideParticipant)
+        .join(RideOffer)
+        .filter(
+            RideParticipant.user_id == user_id,
+            RideOffer.status.notin_(["completed", "cancelled"])
+        )
+        .first()
+    )
 
-
-class RideFullError(Exception):
-    pass
-
-
-class RideAlreadyJoinedError(Exception):
-    pass
-
-
-class RideMatchCriteriaError(Exception):
-    pass
+    return passenger_ride is not None
 
 
 # =========================
@@ -41,6 +58,10 @@ class RideMatchCriteriaError(Exception):
 # =========================
 
 def create_ride(db: Session, driver: User, ride_in: RideCreate) -> RideOffer:
+    # 🚫 Prevent multiple active rides
+    if user_has_active_ride(db, driver.id):
+        raise RidePermissionError("You already have an active ride")
+
     ride = RideOffer(
         driver_id=driver.id,
         pickup_location=ride_in.pickup_location,
@@ -71,7 +92,7 @@ def list_available_rides(
         .filter(
             RideOffer.status == "active",
             RideOffer.available_seat > 0,
-            RideOffer.driver_id != current_user.id,  # <--- exclude own rides
+            RideOffer.driver_id != current_user.id,
         )
         .order_by(RideOffer.departure_time.asc())
         .offset(skip)
@@ -170,7 +191,6 @@ def update_ride(
         ride.fare = ride_in.fare
 
     if ride_in.available_seat is not None:
-
         if ride_in.available_seat < 0:
             raise ValueError("Available seats cannot be negative")
 
@@ -198,52 +218,59 @@ def update_ride(
 # =========================
 
 def join_ride(db: Session, ride_id: UUID, user: User) -> RideParticipant:
+    try:
+        # 🚫 Prevent multiple active rides
+        if user_has_active_ride(db, user.id):
+            raise RidePermissionError("You already have an active ride")
 
-    ride = (
-        db.query(RideOffer)
-        .options(joinedload(RideOffer.driver))
-        .filter(RideOffer.id == ride_id)
-        .with_for_update()
-        .first()
-    )
+        ride = db.query(RideOffer).filter(RideOffer.id == ride_id).first()
 
-    if not ride:
-        raise RideNotFoundError("Ride not found")
+        if not ride:
+            raise RideNotFoundError("Ride not found")
 
-    if ride.driver_id == user.id:
-        raise RidePermissionError("Driver cannot join their own ride")
+        if ride.driver_id == user.id:
+            raise RidePermissionError("Driver cannot join their own ride")
 
-    if ride.status != "active":
-        raise RidePermissionError("Ride is not active")
+        if ride.status != "active":
+            raise RidePermissionError("Ride is not active")
 
-    if ride.available_seat <= 0:
-        raise RideFullError("Ride is full")
-
-    existing = (
-        db.query(RideParticipant)
-        .filter(
-            RideParticipant.ride_id == ride.id,
-            RideParticipant.user_id == user.id,
+        existing = (
+            db.query(RideParticipant)
+            .filter(
+                RideParticipant.ride_id == ride.id,
+                RideParticipant.user_id == user.id,
+            )
+            .first()
         )
-        .first()
-    )
 
-    if existing:
-        raise RideAlreadyJoinedError("You have already joined this ride")
+        if existing:
+            raise RideAlreadyJoinedError("You have already joined this ride")
 
-    participant = RideParticipant(
-        ride_id=ride.id,
-        user_id=user.id,
-    )
+        updated_rows = (
+            db.execute(
+                update(RideOffer)
+                .where(RideOffer.id == ride.id, RideOffer.available_seat > 0)
+                .values(available_seat=RideOffer.available_seat - 1)
+            )
+        ).rowcount
 
-    ride.available_seat -= 1
+        if updated_rows == 0:
+            raise RideFullError("Ride is full")
 
-    db.add(participant)
+        participant = RideParticipant(
+            ride_id=ride.id,
+            user_id=user.id,
+        )
 
-    db.commit()
-    db.refresh(participant)
+        db.add(participant)
+        db.commit()
+        db.refresh(participant)
 
-    return participant
+        return participant
+
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise e
 
 
 def leave_ride(db: Session, ride_id: UUID, user: User) -> RideParticipant:
@@ -294,7 +321,7 @@ def find_matching_rides(
     query = db.query(RideOffer).filter(
         RideOffer.status == "active",
         RideOffer.available_seat > 0,
-        RideOffer.driver_id != current_user.id,  # EXCLUDE OWN RIDES
+        RideOffer.driver_id != current_user.id,
     )
 
     if pickup:
@@ -311,14 +338,12 @@ def find_matching_rides(
 
 
 def list_user_created_rides(db: Session, user: User) -> List[RideOffer]:
-
     return db.query(RideOffer).filter(
         RideOffer.driver_id == user.id
     ).all()
 
 
 def list_user_joined_rides(db: Session, user: User) -> List[RideParticipant]:
-
     return (
         db.query(RideParticipant)
         .options(joinedload(RideParticipant.ride).joinedload(RideOffer.driver))

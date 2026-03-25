@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import { searchRides, joinRide, getMyJoinedRides } from "../api/rideService";
+import { useRide } from "../context/RideContext";
+import { searchRides, joinRide } from "../api/rideService";
 import RideCard from "../components/RideCard";
 import Button from "../components/Button";
 
@@ -10,7 +11,17 @@ function FindRidePage() {
   const [to, setTo] = useState("");
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [joinedRideIds, setJoinedRideIds] = useState([]);
+
+  const {
+    hasActiveRide,
+    joinedRideIds,
+    refreshRideState
+  } = useRide();
+
+  // ✅ FIX 1: Refresh global state when page loads
+  useEffect(() => {
+    refreshRideState();
+  }, []);
 
   const handleSearch = async () => {
 
@@ -31,18 +42,19 @@ function FindRidePage() {
     }
   };
 
-  useEffect(() => {
-    const loadJoined = async () => {
-      const joined = await getMyJoinedRides();
-      setJoinedRideIds(joined.map((j) => j.ride.id));
-    };
-    loadJoined();
-  }, []);
-
   const handleJoin = async (rideId) => {
+    if (hasActiveRide) {
+      toast.error("You are already in an active ride");
+      return;
+    }
+
     try {
       await joinRide(rideId);
       toast.success("Joined ride");
+
+      // ✅ FIX 2: Always sync from backend (NO manual state updates)
+      await refreshRideState();
+
     } catch (err) {
       console.error(err);
       toast.error("Failed to join ride");
@@ -107,6 +119,7 @@ function FindRidePage() {
               ride={ride}
               onJoin={handleJoin}
               isJoined={joinedRideIds.includes(ride.id)}
+              hasActiveRide={hasActiveRide}
             />
           ))
         )}
