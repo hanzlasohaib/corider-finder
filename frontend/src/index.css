@@ -1,24 +1,122 @@
 @import "tailwindcss";
 
-/* Base styling for the whole app */
+/* Pastel green theme (global) */
+@theme {
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* Keep Tailwind `brand-*` tokens but map them to the app's green palette */
+  --color-brand-50: #e8f5e9;
+  --color-brand-100: #c8e6c9;
+  --color-brand-500: #66bb6a;
+  --color-brand-600: #43a047;
+  --color-brand-700: #2e7d32;
+  --color-accent-500: #66bb6a;
+  --color-accent-600: #43a047;
+}
 
 :root {
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --app-bg: #e8f5e9; /* main background */
+  --app-surface: #c8e6c9; /* sections/cards */
+  --app-accent: #a5d6a7; /* headers/accents */
+  --app-text: #1a1a1a; /* readable dark text */
+  --app-muted: #2e2e2e;
+  --app-shadow: 0 10px 30px rgba(26, 26, 26, 0.08);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #f4f6f8; /* light background for daytime readability */
-  color: #1a1a1a;
+  background-color: var(--app-bg);
+  color: var(--app-text);
 }
-
-/* Improve link appearance */
 
 a {
   text-decoration: none;
 }
 
 a:hover {
-  text-decoration: underline;
+  text-decoration: none;
+}
+
+/* Page shell animation (subtle) */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-page-in {
+  animation: fade-in-up 0.35s ease-out both;
+}
+
+/* App background visuals: subtle co-ride overlay + green wash for readability */
+.app-shell {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--app-bg);
+  color: var(--app-text);
+}
+
+.app-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image: url("./assets/bg-coride.svg");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.10; /* 5%–15% requested */
+  filter: blur(3px); /* keep visuals soft and non-distracting */
+  transform: scale(1.02);
+}
+
+.app-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  /* Prioritize readability (white overlay), with a slight green tint */
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.88),
+    rgba(255, 255, 255, 0.82)
+  );
+}
+
+/* Optional section-level background (subtle, behind content only) */
+.app-section-bg {
+  position: relative;
+  isolation: isolate;
+}
+
+.app-section-bg::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -2;
+  border-radius: 1rem;
+  background-image: url("./assets/bg-coride.svg");
+  background-repeat: no-repeat;
+  background-size: 1200px auto;
+  background-position: 80% 30%;
+  opacity: 0.07;
+  filter: blur(3px);
+}
+
+.app-section-bg::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: -1;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.86);
 }
