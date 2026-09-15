@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
@@ -22,6 +22,7 @@ class UserCreate(UserBase):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=255)
+    portal: Literal["student", "admin"] = "student"
 
 
 class UserUpdate(BaseModel):
@@ -33,6 +34,7 @@ class UserUpdate(BaseModel):
 
 class UserResponse(UserBase):
     id: UUID
+    role: str
     is_active: bool
     created_at: datetime
 

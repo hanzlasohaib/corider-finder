@@ -2,8 +2,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import Layout from "../components/Layout";
 
-import LoginPage from "../pages/LoginPage";
-import RegisterPage from "../pages/RegisterPage";
+import AuthPage from "../pages/AuthPage";
 import HomePage from "../pages/HomePage";
 import DashboardPage from "../pages/DashboardPage";
 import DashboardHome from "../pages/DashboardHome";
@@ -13,86 +12,46 @@ import MyRidesPage from "../pages/MyRidesPage";
 import ProfilePage from "../pages/ProfilePage";
 import NotFound from "../pages/NotFound";
 
-import ProtectedRoute from "./ProtectedRoute";
+import ProtectedRoute, { GuestRoute } from "./ProtectedRoute";
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <Layout />,
     children: [
-
       { index: true, element: <HomePage /> },
-
-      { path: "/login", element: <LoginPage /> },
-
-      { path: "/register", element: <RegisterPage /> },
-
-     
-{
-  path: "/dashboard",
-  element: (
-    <ProtectedRoute>
-      <DashboardPage />
-    </ProtectedRoute>
-  ),
-  children: [
-    {
-      index: true,
-      element: <DashboardHome />,
-    },
-    {
-      path: "offer",
-      element: <OfferRidePage />,
-    },
-    {
-      path: "find",
-      element: <FindRidePage />,
-    },
-    {
-      path: "myrides",
-      element: <MyRidesPage />,
-    },
-  ],
-},
-
       {
-        path: "/dashboard/offer",
+        path: "/login",
         element: (
-          <ProtectedRoute>
-            <OfferRidePage />
-          </ProtectedRoute>
+          <GuestRoute>
+            <AuthPage />
+          </GuestRoute>
         ),
       },
-
       {
-        path: "/dashboard/find",
+        path: "/register",
         element: (
-          <ProtectedRoute>
-            <FindRidePage />
-          </ProtectedRoute>
+          <GuestRoute>
+            <AuthPage />
+          </GuestRoute>
         ),
       },
-
       {
-        path: "/dashboard/myrides",
+        path: "/dashboard",
         element: (
           <ProtectedRoute>
-            <MyRidesPage />
+            <DashboardPage />
           </ProtectedRoute>
         ),
+        children: [
+          { index: true, element: <DashboardHome /> },
+          { path: "offer", element: <OfferRidePage /> },
+          { path: "find", element: <FindRidePage /> },
+          { path: "myrides", element: <MyRidesPage /> },
+          { path: "profile", element: <ProfilePage /> },
+        ],
       },
-
-{
-  path: "/dashboard/profile",
-  element: (
-    <ProtectedRoute>
-      <ProfilePage />
-    </ProtectedRoute>
-  ),
-},
-
       { path: "*", element: <NotFound /> },
-
     ],
   },
 ]);
