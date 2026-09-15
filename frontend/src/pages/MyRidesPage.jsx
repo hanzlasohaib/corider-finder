@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Car, Users } from "lucide-react";
 import {
@@ -10,11 +11,14 @@ import {
   deleteRide,
 } from "../api/rideService";
 import RideCard from "../components/RideCard";
+import Button from "../components/Button";
 import { useRide } from "../context/RideContext";
 import EmptyState from "../components/EmptyState";
 import { RideListSkeleton } from "../components/Skeleton";
+import { apiErrorMessage } from "../lib/apiError";
 
 function MyRidesPage() {
+  const navigate = useNavigate();
   const [createdRides, setCreatedRides] = useState([]);
   const [joinedRides, setJoinedRides] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,10 +33,10 @@ function MyRidesPage() {
 
       await refreshRideState();
 
-      toast.success("Left ride successfully");
+      toast.success("Left ride");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to leave ride");
+      toast.error(apiErrorMessage(err, "Could not leave this ride."));
     }
   };
 
@@ -51,7 +55,7 @@ function MyRidesPage() {
       toast.success("Ride cancelled");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to cancel ride");
+      toast.error(apiErrorMessage(err, "Could not cancel this ride."));
     }
   };
 
@@ -70,7 +74,7 @@ function MyRidesPage() {
       toast.success("Ride completed");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to complete ride");
+      toast.error(apiErrorMessage(err, "Could not mark this ride complete."));
     }
   };
 
@@ -85,7 +89,7 @@ function MyRidesPage() {
       toast.success("Ride deleted");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to delete ride");
+      toast.error(apiErrorMessage(err, "Could not delete this ride."));
     }
   };
 
@@ -134,7 +138,12 @@ function MyRidesPage() {
           <EmptyState
             icon={Car}
             title="No rides you are hosting"
-            description="When you offer a ride, it will show up here. Passengers can request to join from Find ride."
+            description="When you offer a ride, it will show up here."
+            action={
+              <Button variant="outline" onClick={() => navigate("/dashboard/offer")}>
+                Offer a ride
+              </Button>
+            }
           />
         ) : (
           <div className="space-y-4">
@@ -165,7 +174,12 @@ function MyRidesPage() {
           <EmptyState
             icon={Users}
             title="No joined rides yet"
-            description="Use Find ride to search routes and join a trip. Your upcoming and past joins will appear here."
+            description="Open trips are on Overview and Find ride."
+            action={
+              <Button variant="outline" onClick={() => navigate("/dashboard/find")}>
+                Find a ride
+              </Button>
+            }
           />
         ) : (
           <div className="space-y-4">

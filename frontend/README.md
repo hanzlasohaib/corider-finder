@@ -9,7 +9,7 @@ A modern ride-sharing web application built with **React (Vite)** and **Tailwind
 * 🔍 Search rides by pickup and destination
 * 🚘 Join available rides
 * 📋 View your created and joined rides
-* ⚡ Real-time UI updates (no page refresh required)
+* Search, join, and manage rides without a full page reload
 * 🔐 Authentication-based access
 * 🎯 Clean and responsive dashboard UI
 
@@ -31,10 +31,10 @@ A modern ride-sharing web application built with **React (Vite)** and **Tailwind
 ```
 src/
 │── api/          # API service functions
-│── components/   # Reusable UI components
+│── components/   # Reusable UI components (Layout, Navbar, Sidebar)
 │── context/      # Global state (RideContext, Auth)
 │── pages/        # App pages (Dashboard, FindRide, etc.)
-│── layouts/      # Layouts (Sidebar, Navbar)
+│── routes/       # Router and route guards
 │── assets/       # Images / icons
 │── App.jsx
 │── main.jsx
@@ -47,7 +47,7 @@ src/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/coride-finder.git
+git clone https://github.com/hanzlasohaib/corider-finder.git
 cd coride-finder/frontend
 ```
 
@@ -76,7 +76,7 @@ http://localhost:5173
 Create a `.env` file in the frontend root:
 
 ```env
-VITE_API_BASE_URL=http://127.0.0.1:8000/api/v1
+VITE_API_BASE_URL=http://127.0.0.1:8000/api
 ```
 
 ---

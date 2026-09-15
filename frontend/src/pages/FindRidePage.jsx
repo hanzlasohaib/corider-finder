@@ -1,40 +1,45 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import toast from "react-hot-toast";
 import { MapPin, Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useRide } from "../context/RideContext";
-import { searchRides, joinRide } from "../api/rideService";
+import { searchRides, joinRide, getAvailableRides } from "../api/rideService";
 import RideCard from "../components/RideCard";
 import Button from "../components/Button";
 import Card from "../components/Card";
 import EmptyState from "../components/EmptyState";
 import { RideListSkeleton } from "../components/Skeleton";
 import { fieldWithIconClass } from "../lib/formClasses";
+import { apiErrorMessage } from "../lib/apiError";
+
+const FindRideMap = lazy(() => import("../components/FindRideMap"));
 
 function FindRidePage() {
+  const navigate = useNavigate();
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [rides, setRides] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [appliedFrom, setAppliedFrom] = useState("");
+  const [appliedTo, setAppliedTo] = useState("");
 
   const { hasActiveRide, joinedRideIds, refreshRideState } = useRide();
+  const isFiltered = Boolean(appliedFrom || appliedTo);
+  const canClear = isFiltered || Boolean(from.trim() || to.trim());
 
-  useEffect(() => {
-    refreshRideState();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync on mount only
-  }, []);
-
-  const handleSearch = async () => {
-    if (!from && !to) {
-      toast.error("Enter at least one field");
-      return;
-    }
+  const loadRides = async (pickup = "", destination = "") => {
+    const pickupValue = pickup.trim();
+    const destValue = destination.trim();
 
     try {
       setLoading(true);
-      setHasSearched(true);
-      const data = await searchRides(from, to);
+      const data =
+        pickupValue || destValue
+          ? await searchRides(pickupValue, destValue)
+          : await getAvailableRides();
       setRides(data);
+      setAppliedFrom(pickupValue);
+      setAppliedTo(destValue);
     } catch (err) {
       console.error(err);
       toast.error("Failed to fetch rides");
@@ -43,19 +48,37 @@ function FindRidePage() {
     }
   };
 
+  useEffect(() => {
+    refreshRideState();
+    loadRides("", "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- browse on mount only
+  }, []);
+
+  const handleSearch = async () => {
+    await loadRides(from, to);
+  };
+
+  const handleClear = async () => {
+    setFrom("");
+    setTo("");
+    await loadRides("", "");
+  };
+
   const handleJoin = async (rideId) => {
     if (hasActiveRide) {
       toast.error("You are already in an active ride");
-      return;
+      throw new Error("already-in-ride");
     }
 
     try {
       await joinRide(rideId);
-      toast.success("Joined ride");
+      toast.success("Joined ride. It is on My rides.");
       await refreshRideState();
+      navigate("/dashboard/myrides");
     } catch (err) {
       console.error(err);
-      toast.error("Failed to join ride");
+      toast.error(apiErrorMessage(err, "Could not join this ride. Try again."));
+      throw err;
     }
   };
 
@@ -66,13 +89,19 @@ function FindRidePage() {
           Find a ride
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Search by pickup, destination, or both — then join a ride that fits
-          your route.
+          Open trips are listed below. Filter by pickup or destination if you
+          want a tighter match.
         </p>
       </div>
 
       <Card>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+        <form
+          className="flex flex-col gap-4 lg:flex-row lg:items-end"
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSearch();
+          }}
+        >
           <div className="grid flex-1 gap-4 sm:grid-cols-2">
             <div>
               <label
@@ -123,40 +152,69 @@ function FindRidePage() {
             </div>
           </div>
 
-          <Button
-            onClick={handleSearch}
-            disabled={loading}
-            loading={loading}
-            className="shrink-0 lg:self-end"
-          >
-            Search rides
-          </Button>
-        </div>
+          <div className="flex shrink-0 flex-wrap gap-2 lg:self-end">
+            <Button type="submit" disabled={loading} loading={loading}>
+              Search rides
+            </Button>
+            {canClear && (
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={loading}
+                onClick={handleClear}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+        </form>
       </Card>
 
-      <section aria-label="Search results" className="space-y-4">
+      {!loading && rides.length > 0 ? (
+        <Suspense fallback={<div className="h-72 rounded-2xl bg-stone-200" aria-hidden />}>
+          <FindRideMap
+          rides={rides}
+          onSelectRide={(rideId) => {
+            document
+              .getElementById(`ride-${rideId}`)
+              ?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }}
+        />
+        </Suspense>
+      ) : null}
+
+      <section
+        aria-label={isFiltered ? "Matching rides" : "Open rides"}
+        className="space-y-4"
+      >
         {loading ? (
           <RideListSkeleton count={3} />
-        ) : !hasSearched ? (
-          <EmptyState
-            icon={Search}
-            title="Search for rides"
-            description="Enter a starting point or destination and tap Search rides to see matches near you."
-          />
         ) : rides.length === 0 ? (
           <EmptyState
-            icon={MapPin}
-            title="No rides match"
-            description="Try different locations or check back later — new rides are added often."
+            icon={isFiltered ? MapPin : Search}
+            title={isFiltered ? "No rides match" : "Nothing available right now"}
+            description={
+              isFiltered
+                ? "Try different locations, or clear the search to see all open trips."
+                : "Check back soon, or offer a ride of your own."
+            }
+            action={
+              isFiltered ? (
+                <Button variant="outline" onClick={handleClear}>
+                  Clear search
+                </Button>
+              ) : null
+            }
           />
         ) : (
           rides.map((ride) => (
-            <RideCard
-              key={ride.id}
-              ride={ride}
-              onJoin={handleJoin}
-              isJoined={joinedRideIds.includes(ride.id)}
-            />
+            <div key={ride.id} id={`ride-${ride.id}`}>
+              <RideCard
+                ride={ride}
+                onJoin={handleJoin}
+                isJoined={joinedRideIds.includes(ride.id)}
+              />
+            </div>
           ))
         )}
       </section>

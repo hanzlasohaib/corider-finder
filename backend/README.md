@@ -60,9 +60,14 @@ http://127.0.0.1:8000/docs
 
 Database: **PostgreSQL**
 
-Tables are **automatically created on application startup** using SQLAlchemy models.
+Tables can be created automatically in non-production environments on startup.
 
-No migration tool (like Alembic) is currently used.
+For production, run Alembic:
+
+```
+cd backend
+alembic upgrade head
+```
 
 ---
 
@@ -102,8 +107,9 @@ Example:
 
 ```
 DATABASE_URL=postgresql+psycopg2://user:password@localhost:5432/coride
-SECRET_KEY=your-secret-key
+SECRET_KEY=replace-with-a-long-random-string
 ACCESS_TOKEN_EXPIRE_MINUTES=30
+BACKEND_CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 ```
 
 ---
@@ -126,7 +132,8 @@ http://127.0.0.1:8000
 
 # Development Notes
 
-* Tables are automatically created in the database when the server starts.
+* Tables can be created automatically when `ENV` is not `production`.
+* Use `alembic upgrade head` to apply versioned schema changes.
 * The API is versioned under `/api/v1`.
 * All endpoints can be tested using Swagger UI.
 
@@ -159,7 +166,7 @@ PS D:\Projects\CoRider Finder> .venv\Scripts\activate
 
 # Future Improvements
 
-* Add database migrations
+* Alembic migrations are in `alembic/versions/`
 * Add ride history endpoints
 * Add user profile APIs
 * Add request validation improvements

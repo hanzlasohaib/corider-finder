@@ -44,21 +44,27 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
 def init_middlewares(app: FastAPI) -> None:
     settings = get_settings()
 
-    if settings.BACKEND_CORS_ORIGINS:
-        cors_origins = [origin.strip() for origin in settings.BACKEND_CORS_ORIGINS.split(",") if origin.strip()]
-    else:
-        cors_origins = ["*"]
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=cors_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
-    # Request logging
+    # Last added runs first. CORS must wrap BaseHTTPMiddleware so browser
+    # preflight OPTIONS never hits logging/rate-limit or the login Form parser.
+    app.add_middleware(RateLimitingMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
 
-    # Rate limiting placeholder
-    app.add_middleware(RateLimitingMiddleware)
+    cors_kwargs: dict = {
+        "allow_origins": settings.cors_origins(),
+        "allow_credentials": True,
+        "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+        "allow_headers": [
+            "Authorization",
+            "Content-Type",
+            "Accept",
+            "X-Requested-With",
+        ],
+        "max_age": 600,
+    }
+    if settings.ENV.lower() != "production":
+        cors_kwargs["allow_origin_regex"] = (
+            r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
+        )
+
+    app.add_middleware(CORSMiddleware, **cors_kwargs)
 

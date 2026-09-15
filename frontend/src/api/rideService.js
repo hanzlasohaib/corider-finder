@@ -35,7 +35,7 @@ export const joinRide = async (rideId) => {
   const res = await api.post(`/v1/rides/${rideId}/join`);
   return res.data;
 } catch (err) {
-  throw err.response?.data?.detail || "Failed to create ride";
+  throw err.response?.data?.detail || "Failed to join ride";
 }
 };
 

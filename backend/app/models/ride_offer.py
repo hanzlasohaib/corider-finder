@@ -17,7 +17,7 @@ class RideOffer(Base):
     __tablename__ = "ride_offers"
 
     __table_args__ = (
-        CheckConstraint("available_seat >= 1", name="ck_available_seat_min_one"),
+        CheckConstraint("available_seat >= 0", name="ck_available_seat_min_zero"),
         CheckConstraint("available_seat <= 2", name="ck_ride_offers_available_seat_max_two"),
     )
 

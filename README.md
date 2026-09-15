@@ -22,11 +22,11 @@ Built using a modern, scalable tech stack: **React + FastAPI + PostgreSQL**.
 * View created rides
 * View joined rides
 
-### ⚡ Real-Time UX
+### ⚡ Ride updates
 
-* Instant UI updates after joining rides
-* Global ride state synchronization
-* No page refresh required
+* Dashboard and ride lists refresh after you join, leave, or manage a ride
+* No full page reload required
+* Toasts for success and error feedback
 
 ### 🎨 UI/UX
 
@@ -93,7 +93,7 @@ coride-finder/
 ### 1️⃣ Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/coride-finder.git
+git clone https://github.com/hanzlasohaib/corider-finder.git
 cd coride-finder
 ```
 
@@ -139,9 +139,11 @@ Create a `.env` file:
 
 ```env
 DATABASE_URL=postgresql+psycopg2://username:password@localhost:5432/coride_finder
-SECRET_KEY=your_secret_key
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=60
+SECRET_KEY=replace-with-a-long-random-string
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+BACKEND_CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 ```
 
 ### 6. Run backend server
@@ -177,7 +179,7 @@ npm install
 Create a `.env` file:
 
 ```env
-VITE_API_BASE_URL=http://127.0.0.1:8000/api/v1
+VITE_API_BASE_URL=http://127.0.0.1:8000/api
 ```
 
 ### 4. Run frontend
@@ -207,20 +209,22 @@ http://localhost:5173
 
 ### 🚘 Rides
 
-* `POST /api/v1/rides/offer`
-* `GET /api/v1/rides/search`
+* `POST /api/v1/rides`
+* `GET /api/v1/rides`
+* `GET /api/v1/rides/matches`
 * `POST /api/v1/rides/{id}/join`
 * `GET /api/v1/rides/user/created`
+* `GET /api/v1/rides/user/joined`
 
 ---
 
 ## 🧠 Architecture Highlights
 
 * Clean separation of frontend & backend
-* Context API for global state management
+* Context API for auth and ride membership state
 * RESTful API design
-* JWT-based authentication
-* Optimistic UI updates for enhanced user experience
+* JWT access + refresh tokens
+* Alembic migrations for schema changes (`backend/alembic`)
 
 ---
 

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import update
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.core.errors import (
     RideNotFoundError,
@@ -53,6 +54,27 @@ def user_has_active_ride(db: Session, user_id: UUID) -> bool:
     return passenger_ride is not None
 
 
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _ilike_contains(value: str) -> str:
+    escaped = (
+        value.replace("\\", "\\\\")
+        .replace("%", "\\%")
+        .replace("_", "\\_")
+    )
+    return f"%{escaped}%"
+
+
+def _upcoming_available_filters():
+    return (
+        RideOffer.status == "active",
+        RideOffer.available_seat > 0,
+        RideOffer.departure_time >= _utcnow(),
+    )
+
+
 # =========================
 # Core Ride Logic
 # =========================
@@ -74,8 +96,12 @@ def create_ride(db: Session, driver: User, ride_in: RideCreate) -> RideOffer:
 
     db.add(ride)
     db.commit()
-    db.refresh(ride)
-
+    ride = (
+        db.query(RideOffer)
+        .options(joinedload(RideOffer.driver))
+        .filter(RideOffer.id == ride.id)
+        .one()
+    )
     return ride
 
 
@@ -90,8 +116,7 @@ def list_available_rides(
         db.query(RideOffer)
         .options(joinedload(RideOffer.driver))
         .filter(
-            RideOffer.status == "active",
-            RideOffer.available_seat > 0,
+            *_upcoming_available_filters(),
             RideOffer.driver_id != current_user.id,
         )
         .order_by(RideOffer.departure_time.asc())
@@ -102,7 +127,12 @@ def list_available_rides(
 
 
 def get_ride_by_id(db: Session, ride_id: UUID) -> RideOffer:
-    ride = db.query(RideOffer).filter(RideOffer.id == ride_id).first()
+    ride = (
+        db.query(RideOffer)
+        .options(joinedload(RideOffer.driver))
+        .filter(RideOffer.id == ride_id)
+        .first()
+    )
 
     if not ride:
         raise RideNotFoundError("Ride not found")
@@ -234,6 +264,12 @@ def join_ride(db: Session, ride_id: UUID, user: User) -> RideParticipant:
         if ride.status != "active":
             raise RidePermissionError("Ride is not active")
 
+        departure = ride.departure_time
+        if departure.tzinfo is None:
+            departure = departure.replace(tzinfo=timezone.utc)
+        if departure < _utcnow():
+            raise RidePermissionError("Ride has already departed")
+
         existing = (
             db.query(RideParticipant)
             .filter(
@@ -264,13 +300,20 @@ def join_ride(db: Session, ride_id: UUID, user: User) -> RideParticipant:
 
         db.add(participant)
         db.commit()
-        db.refresh(participant)
-
+        participant = (
+            db.query(RideParticipant)
+            .options(joinedload(RideParticipant.ride).joinedload(RideOffer.driver))
+            .filter(RideParticipant.id == participant.id)
+            .one()
+        )
         return participant
 
-    except SQLAlchemyError as e:
+    except IntegrityError as exc:
         db.rollback()
-        raise e
+        raise RideAlreadyJoinedError("You have already joined this ride") from exc
+    except SQLAlchemyError:
+        db.rollback()
+        raise
 
 
 def leave_ride(db: Session, ride_id: UUID, user: User) -> RideParticipant:
@@ -285,6 +328,7 @@ def leave_ride(db: Session, ride_id: UUID, user: User) -> RideParticipant:
 
     participant = (
         db.query(RideParticipant)
+        .options(joinedload(RideParticipant.ride).joinedload(RideOffer.driver))
         .filter(
             RideParticipant.ride_id == ride.id,
             RideParticipant.user_id == user.id,
@@ -293,11 +337,11 @@ def leave_ride(db: Session, ride_id: UUID, user: User) -> RideParticipant:
     )
 
     if not participant:
-        raise RideNotFoundError("You are not a participant of this ride")
+        raise RidePermissionError("You are not a participant of this ride")
 
     db.delete(participant)
 
-    ride.available_seat += 1
+    ride.available_seat = min(ride.available_seat + 1, 2)
 
     db.commit()
 
@@ -318,29 +362,31 @@ def find_matching_rides(
     if not pickup and not destination:
         return list_available_rides(db, current_user)
 
-    query = db.query(RideOffer).filter(
-        RideOffer.status == "active",
-        RideOffer.available_seat > 0,
+    query = db.query(RideOffer).options(joinedload(RideOffer.driver)).filter(
+        *_upcoming_available_filters(),
         RideOffer.driver_id != current_user.id,
     )
 
     if pickup:
         query = query.filter(
-            RideOffer.pickup_location.ilike(f"%{pickup}%")
+            RideOffer.pickup_location.ilike(_ilike_contains(pickup), escape="\\")
         )
 
     if destination:
         query = query.filter(
-            RideOffer.destination.ilike(f"%{destination}%")
+            RideOffer.destination.ilike(_ilike_contains(destination), escape="\\")
         )
 
-    return query.order_by(RideOffer.departure_time.asc()).all()
+    return query.order_by(RideOffer.departure_time.asc()).limit(100).all()
 
 
 def list_user_created_rides(db: Session, user: User) -> List[RideOffer]:
-    return db.query(RideOffer).filter(
-        RideOffer.driver_id == user.id
-    ).all()
+    return (
+        db.query(RideOffer)
+        .options(joinedload(RideOffer.driver))
+        .filter(RideOffer.driver_id == user.id)
+        .all()
+    )
 
 
 def list_user_joined_rides(db: Session, user: User) -> List[RideParticipant]:
