@@ -1,7 +1,9 @@
 import Button from "./Button";
-import { useState } from "react";
+import ConfirmDialog from "./ConfirmDialog";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { useRide } from "../context/RideContext";
+import { formatRideWhen, rideRouteLabel } from "../lib/formatRide";
 import {
   ArrowRight,
   CalendarClock,
@@ -34,6 +36,39 @@ function Badge({ children, tone = "neutral" }) {
   );
 }
 
+const ACTION_COPY = {
+  join: {
+    title: "Join this ride?",
+    confirmLabel: "Join this ride",
+    variant: "primary",
+    extra: "The trip will stay on My rides after you join.",
+  },
+  leave: {
+    title: "Leave this ride?",
+    confirmLabel: "Leave this ride",
+    variant: "secondary",
+    extra: "Your seat will open for someone else.",
+  },
+  cancel: {
+    title: "Cancel this ride?",
+    confirmLabel: "Cancel this ride",
+    variant: "secondary",
+    extra: "Riders will no longer be able to join.",
+  },
+  complete: {
+    title: "Mark this ride complete?",
+    confirmLabel: "Mark as complete",
+    variant: "primary",
+    extra: "Use this after the trip has happened.",
+  },
+  delete: {
+    title: "Delete this ride?",
+    confirmLabel: "Delete this ride",
+    variant: "danger",
+    extra: "This cannot be undone.",
+  },
+};
+
 function RideCard({
   ride,
   onJoin,
@@ -46,21 +81,12 @@ function RideCard({
 }) {
   const { hasActiveRide, refreshRideState, setHasActiveRide } = useRide();
   const [isJoinedState, setIsJoinedState] = useState(initialJoined);
+  const [pending, setPending] = useState(null);
+  const [busy, setBusy] = useState(false);
 
-  const handleJoin = async () => {
-    if (hasActiveRide) {
-      toast.error("You are already in an active ride");
-      return;
-    }
-
-    try {
-      await onJoin(ride.id);
-      setIsJoinedState(true);
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to join ride");
-    }
-  };
+  useEffect(() => {
+    setIsJoinedState(Boolean(initialJoined));
+  }, [initialJoined]);
 
   const isActive = ride.status === "active";
   const isCompleted = ride.status === "completed";
@@ -68,6 +94,8 @@ function RideCard({
   const seatsLeft = Number(ride.available_seat);
   const isFull = !Number.isFinite(seatsLeft) ? false : seatsLeft <= 0;
   const seatText = ride.available_seat === 1 ? "seat" : "seats";
+  const when = formatRideWhen(ride.departure_time);
+  const route = rideRouteLabel(ride);
 
   const joinDisabled =
     isJoinedState ||
@@ -79,6 +107,46 @@ function RideCard({
   if (isJoinedState) joinLabel = "Joined";
   else if (isFull) joinLabel = "Full";
   else if (hasActiveRide) joinLabel = "In a ride";
+
+  const copy = pending ? ACTION_COPY[pending] : null;
+  const dialogDescription = copy
+    ? `${route} at ${when}. Rs ${ride.fare} per seat. ${copy.extra}`
+    : "";
+
+  const runAction = async (kind) => {
+    if (kind === "join" && hasActiveRide) {
+      toast.error("You are already in an active ride");
+      setPending(null);
+      return;
+    }
+
+    setBusy(true);
+    try {
+      if (kind === "join") {
+        await onJoin(ride.id);
+        setIsJoinedState(true);
+        setHasActiveRide(true);
+      } else if (kind === "leave") {
+        await onLeave(ride.id);
+        setHasActiveRide(false);
+      } else if (kind === "cancel") {
+        await onCancel(ride.id);
+        setHasActiveRide(false);
+      } else if (kind === "complete") {
+        await onComplete(ride.id);
+        setHasActiveRide(false);
+      } else if (kind === "delete") {
+        await onDelete(ride.id);
+        setHasActiveRide(false);
+      }
+      await refreshRideState();
+      setPending(null);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <article className="group rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition-all duration-200 hover:border-slate-300/80 hover:shadow-md">
@@ -116,9 +184,7 @@ function RideCard({
                   className="mt-0.5 h-4 w-4 shrink-0 text-slate-400"
                   aria-hidden
                 />
-                <time dateTime={ride.departure_time}>
-                  {new Date(ride.departure_time).toLocaleString()}
-                </time>
+                <time dateTime={ride.departure_time}>{when}</time>
               </div>
 
               <div className="flex flex-wrap gap-x-6 gap-y-2">
@@ -145,7 +211,7 @@ function RideCard({
 
               {joinedAt && (
                 <p className="text-xs text-slate-500">
-                  Joined {new Date(joinedAt).toLocaleString()}
+                  Joined {formatRideWhen(joinedAt)}
                 </p>
               )}
             </div>
@@ -156,16 +222,8 @@ function RideCard({
           {onJoin && isActive && (
             <Button
               variant={isJoinedState ? "secondary" : "primary"}
-              disabled={joinDisabled}
-              onClick={async () => {
-                try {
-                  await handleJoin();
-                  setHasActiveRide(true);
-                  await refreshRideState();
-                } catch (err) {
-                  console.error(err);
-                }
-              }}
+              disabled={joinDisabled || busy}
+              onClick={() => setPending("join")}
               className="w-full sm:w-auto lg:w-full"
             >
               {joinLabel}
@@ -175,15 +233,8 @@ function RideCard({
           {onLeave && !isCompleted && !isCancelled && (
             <Button
               variant="secondary"
-              onClick={async () => {
-                try {
-                  await onLeave(ride.id);
-                  setHasActiveRide(false);
-                  await refreshRideState();
-                } catch (err) {
-                  console.error(err);
-                }
-              }}
+              disabled={busy}
+              onClick={() => setPending("leave")}
               className="w-full sm:w-auto lg:w-full"
             >
               Leave ride
@@ -195,15 +246,8 @@ function RideCard({
               {onCancel && (
                 <Button
                   variant="secondary"
-                  onClick={async () => {
-                    try {
-                      await onCancel(ride.id);
-                      setHasActiveRide(false);
-                      await refreshRideState();
-                    } catch (err) {
-                      console.error(err);
-                    }
-                  }}
+                  disabled={busy}
+                  onClick={() => setPending("cancel")}
                   className="w-full sm:w-auto lg:w-full"
                 >
                   Cancel ride
@@ -213,15 +257,8 @@ function RideCard({
               {onComplete && (
                 <Button
                   variant="outline"
-                  onClick={async () => {
-                    try {
-                      await onComplete(ride.id);
-                      setHasActiveRide(false);
-                      await refreshRideState();
-                    } catch (err) {
-                      console.error(err);
-                    }
-                  }}
+                  disabled={busy}
+                  onClick={() => setPending("complete")}
                   className="w-full sm:w-auto lg:w-full"
                 >
                   Complete ride
@@ -233,15 +270,8 @@ function RideCard({
           {!isCompleted && onDelete && (
             <Button
               variant="danger"
-              onClick={async () => {
-                try {
-                  await onDelete(ride.id);
-                  setHasActiveRide(false);
-                  await refreshRideState();
-                } catch (err) {
-                  console.error(err);
-                }
-              }}
+              disabled={busy}
+              onClick={() => setPending("delete")}
               className="w-full sm:w-auto lg:w-full"
             >
               Delete
@@ -249,6 +279,19 @@ function RideCard({
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(pending)}
+        title={copy?.title ?? ""}
+        description={dialogDescription}
+        confirmLabel={copy?.confirmLabel ?? "Confirm"}
+        variant={copy?.variant ?? "primary"}
+        loading={busy}
+        onCancel={() => {
+          if (!busy) setPending(null);
+        }}
+        onConfirm={() => runAction(pending)}
+      />
     </article>
   );
 }

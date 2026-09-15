@@ -7,9 +7,14 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-# Ensure test database URL is used before importing app components
-TEST_DATABASE_URL = "sqlite:///./test.db"
-os.environ.setdefault("DATABASE_URL", TEST_DATABASE_URL)
+os.environ["DATABASE_URL"] = "sqlite:///./test.db"
+os.environ["SECRET_KEY"] = "test-secret-key-for-coride-finder"
+os.environ["ENV"] = "test"
+os.environ["BACKEND_CORS_ORIGINS"] = "http://localhost:5173"
+
+from app.core.config import get_settings  # noqa: E402
+
+get_settings.cache_clear()
 
 from app.main import app  # noqa: E402
 from app.db.base import Base  # noqa: E402
@@ -48,4 +53,3 @@ def client(setup_test_database: None) -> Generator[TestClient, None, None]:
 
     with TestClient(app) as test_client:
         yield test_client
-

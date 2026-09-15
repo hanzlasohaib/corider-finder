@@ -57,6 +57,77 @@ a:hover {
   animation: fade-in-up 0.35s ease-out both;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .animate-page-in {
+    animation: fade-in 0.18s ease-out both;
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -100%;
+  z-index: 60;
+  border-radius: 0.75rem;
+  background: #2e7d32;
+  color: #fff;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.skip-link:focus {
+  top: 1rem;
+  outline: 2px solid #2e7d32;
+  outline-offset: 2px;
+}
+
+.ride-map {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+  min-height: 18rem;
+  background: #d7e3d4;
+}
+
+.ride-map .leaflet-container {
+  height: 100%;
+  width: 100%;
+  font-family: inherit;
+  z-index: 0;
+}
+
+.ride-pin {
+  background: transparent;
+  border: 0;
+}
+
+.ride-pin-dot {
+  display: block;
+  width: 16px;
+  height: 16px;
+  margin: 4px auto 0;
+  border-radius: 999px;
+  box-shadow: 0 1px 4px rgba(26, 35, 32, 0.35);
+}
+
+.ride-pin-from .ride-pin-dot {
+  background: #2e7d32;
+}
+
+.ride-pin-to .ride-pin-dot {
+  background: #c2410c;
+}
+
 /* App background visuals: subtle co-ride overlay + green wash for readability */
 .app-shell {
   position: relative;

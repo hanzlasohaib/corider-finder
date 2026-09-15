@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic import ConfigDict
 
 from app.schemas.user import UserBasicResponse
@@ -13,9 +13,18 @@ class RideCreate(BaseModel):
     destination: str = Field(..., min_length=1, max_length=255)
     departure_time: datetime
     fare: float = Field(..., ge=0)
-    available_seat: int = Field(..., ge=1)
+    available_seat: int = Field(..., ge=1, le=2)
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("departure_time")
+    @classmethod
+    def departure_must_be_upcoming(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        if value < datetime.now(timezone.utc):
+            raise ValueError("departure_time must be in the future")
+        return value
 
 
 class RideResponse(BaseModel):
@@ -54,6 +63,6 @@ class RideUpdate(BaseModel):
     destination: str | None = Field(None, min_length=1, max_length=255)
     departure_time: datetime | None = None
     fare: float | None = Field(None, ge=0)
-    available_seat: int | None = Field(None, ge=1)
+    available_seat: int | None = Field(None, ge=0, le=2)
 
     model_config = ConfigDict(from_attributes=True)

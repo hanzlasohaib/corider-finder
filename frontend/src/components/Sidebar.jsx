@@ -4,6 +4,7 @@ import {
   Search,
   Car,
   ListOrdered,
+  UserRound,
 } from "lucide-react";
 
 const items = [
@@ -11,6 +12,7 @@ const items = [
   { to: "/dashboard/offer", label: "Offer ride", icon: Car },
   { to: "/dashboard/find", label: "Find ride", icon: Search },
   { to: "/dashboard/myrides", label: "My rides", icon: ListOrdered },
+  { to: "/dashboard/profile", label: "Profile", icon: UserRound },
 ];
 
 export default function Sidebar() {
@@ -33,7 +35,7 @@ export default function Sidebar() {
             end={end}
             className={({ isActive }) =>
               [
-                "group flex shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                "group flex shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2",
                 isActive
                   ? "bg-brand-50 text-brand-700 shadow-sm ring-1 ring-brand-100"
                   : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",

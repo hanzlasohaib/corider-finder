@@ -42,7 +42,13 @@ def create_ride_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> RideResponse:
-    ride = create_ride(db, current_user, ride_in)
+    try:
+        ride = create_ride(db, current_user, ride_in)
+    except RidePermissionError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e),
+        )
     return RideResponse.model_validate(ride)
 
 
@@ -87,6 +93,41 @@ def match_rides_endpoint(
 
 
 # =========================
+# User Created Rides
+# =========================
+
+@router.get("/user/created", response_model=List[RideResponse])
+def list_user_created_rides_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> List[RideResponse]:
+
+    rides = list_user_created_rides(db, current_user)
+    return [RideResponse.model_validate(r) for r in rides]
+
+
+# =========================
+# User Joined Rides
+# =========================
+
+@router.get("/user/joined", response_model=List[JoinedRideResponse])
+def list_user_joined_rides_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> List[JoinedRideResponse]:
+
+    rides = list_user_joined_rides(db, current_user)
+
+    return [
+        JoinedRideResponse(
+            joined_at=r.joined_at,
+            ride=RideResponse.model_validate(r.ride),
+        )
+        for r in rides
+    ]
+
+
+# =========================
 # Get Ride By ID
 # =========================
 
@@ -94,6 +135,7 @@ def match_rides_endpoint(
 def get_ride_endpoint(
     ride_id: UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> RideResponse:
 
     try:
@@ -253,48 +295,14 @@ def leave_ride_endpoint(
             detail="Ride not found",
         )
 
-    except RidePermissionError:
+    except RidePermissionError as e:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not allowed to leave this ride",
+            detail=str(e),
         )
 
     return RideJoinResponse.model_validate(participant)
 
 
 # =========================
-# User Created Rides
-# =========================
-
-@router.get("/user/created", response_model=List[RideResponse])
-def list_user_created_rides_endpoint(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> List[RideResponse]:
-
-    rides = list_user_created_rides(db, current_user)
-    return [RideResponse.model_validate(r) for r in rides]
-
-
-# =========================
-# User Joined Rides
-# =========================
-
-@router.get("/user/joined", response_model=List[JoinedRideResponse])
-def list_user_joined_rides_endpoint(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-) -> List[JoinedRideResponse]:
-
-    rides = list_user_joined_rides(db, current_user)
-
-    return [
-        JoinedRideResponse(
-            id=r.id,
-            ride_id=r.ride_id,
-            user_id=r.user_id,
-            joined_at=r.joined_at,
-            ride=RideResponse.model_validate(r.ride),
-        )
-        for r in rides
-    ]
+# (user collection routes are declared above /{ride_id})

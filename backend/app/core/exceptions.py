@@ -18,7 +18,7 @@ def init_exception_handlers(app: FastAPI) -> None:
         logger.warning("Validation error on %s %s: %s, body=%s", request.method, request.url.path, errors, body)
         return JSONResponse(
             status_code=422,
-            content={"detail": errors, "body": body},
+            content={"detail": errors},
         )
 
     @app.exception_handler(Exception)

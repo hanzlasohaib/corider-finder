@@ -1,9 +1,11 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { getMyCreatedRides, getMyJoinedRides } from "../api/rideService";
+import { useAuth } from "./AuthContext";
 
 const RideContext = createContext();
 
 export const RideProvider = ({ children }) => {
+  const { isAuthenticated } = useAuth();
   const [hasActiveRide, setHasActiveRide] = useState(false);
   const [joinedRideIds, setJoinedRideIds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,7 +22,6 @@ export const RideProvider = ({ children }) => {
         joined.some((j) => j.ride.status === "active");
 
       setHasActiveRide(hasActive);
-
     } catch (err) {
       console.error("RideContext error:", err);
     } finally {
@@ -29,15 +30,15 @@ export const RideProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
+    if (!isAuthenticated) {
+      setHasActiveRide(false);
+      setJoinedRideIds([]);
       setLoading(false);
       return;
     }
 
     refreshRideState();
-  }, []);
+  }, [isAuthenticated]);
 
   return (
     <RideContext.Provider

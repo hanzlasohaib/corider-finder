@@ -1,12 +1,17 @@
-function Button({
-  children,
-  type = "button",
-  variant = "primary",
-  disabled = false,
-  loading = false,
-  onClick,
-  className = "",
-}) {
+import { forwardRef } from "react";
+
+const Button = forwardRef(function Button(
+  {
+    children,
+    type = "button",
+    variant = "primary",
+    disabled = false,
+    loading = false,
+    onClick,
+    className = "",
+  },
+  ref
+) {
   const base =
     "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200 " +
     "focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 " +
@@ -27,9 +32,11 @@ function Button({
 
   return (
     <button
+      ref={ref}
       type={type}
       onClick={onClick}
       disabled={disabled || loading}
+      aria-busy={loading || undefined}
       className={`${base} ${styles[variant]} ${className}`}
     >
       {loading && (
@@ -41,6 +48,6 @@ function Button({
       {children}
     </button>
   );
-}
+});
 
 export default Button;
