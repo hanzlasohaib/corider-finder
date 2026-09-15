@@ -57,7 +57,7 @@ def create_refresh_token(subject: UUID) -> str:
     return _create_token(subject, expire_delta, token_type="refresh")
 
 
-def _decode_token(token: str) -> TokenPayload:
+def _decode_token(token: str, expected_type: str | None = None) -> TokenPayload:
     settings = get_settings()
     try:
         payload = jwt.decode(
@@ -72,11 +72,18 @@ def _decode_token(token: str) -> TokenPayload:
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    if expected_type and token_data.type != expected_type:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return token_data
 
 
-def decode_token(token: str) -> TokenPayload:
-    return _decode_token(token)
+def decode_token(token: str, expected_type: str | None = None) -> TokenPayload:
+    return _decode_token(token, expected_type=expected_type)
 
 
 def get_current_user(
@@ -89,7 +96,7 @@ def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    token_data = _decode_token(token)
+    token_data = _decode_token(token, expected_type="access")
 
     if token_data.sub is None:
         raise credentials_exception
@@ -99,7 +106,24 @@ def get_current_user(
     if user is None:
         raise credentials_exception
 
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Inactive user",
+        )
+
     return user
+
+
+def get_current_admin(
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> User:
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin only",
+        )
+    return current_user
 
 
 __all__ = [
@@ -108,5 +132,6 @@ __all__ = [
     "create_access_token",
     "create_refresh_token",
     "get_current_user",
+    "get_current_admin",
 ]
 

@@ -24,6 +24,12 @@ class InvalidCredentialsError(Exception):
     pass
 
 
+class RoleMismatchError(Exception):
+    def __init__(self, actual_role: str):
+        self.actual_role = actual_role
+        super().__init__(actual_role)
+
+
 def create_user(db: Session, user_in: UserCreate) -> User:
     existing = get_user_by_email(db, user_in.email)
     if existing:
@@ -36,6 +42,7 @@ def create_user(db: Session, user_in: UserCreate) -> User:
         university=user_in.university,
         phone=user_in.phone,
         hashed_password=hashed_password,
+        role="student",
     )
     db.add(user)
     db.commit()
@@ -43,12 +50,20 @@ def create_user(db: Session, user_in: UserCreate) -> User:
     return user
 
 
-def authenticate_user(db: Session, email: str, password: str) -> User:
+def authenticate_user(
+    db: Session,
+    email: str,
+    password: str,
+    portal: str = "student",
+) -> User:
     user = get_user_by_email(db, email)
-    if not user:
+    if not user or not user.is_active:
         raise InvalidCredentialsError("Invalid credentials")
     if not verify_password(password, user.hashed_password):
         raise InvalidCredentialsError("Invalid credentials")
+    expected = portal if portal in {"student", "admin"} else "student"
+    if user.role != expected:
+        raise RoleMismatchError(user.role)
     return user
 
 
@@ -59,17 +74,21 @@ def create_tokens(user: User) -> Dict[str, str]:
         "access_token": access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
+        "role": user.role,
     }
 
 
 def refresh_tokens(db: Session, refresh_token: str) -> Dict[str, str]:
-    token_data = decode_token(refresh_token)
+    try:
+        token_data = decode_token(refresh_token, expected_type="refresh")
+    except Exception as exc:
+        raise InvalidCredentialsError("Invalid refresh token") from exc
 
     if token_data.sub is None:
         raise InvalidCredentialsError("Invalid refresh token")
 
     user = get_user_by_id(db, token_data.sub)
-    if user is None:
+    if user is None or not user.is_active:
         raise InvalidCredentialsError("Invalid refresh token")
 
     new_access_token = create_access_token(user.id)
@@ -77,5 +96,6 @@ def refresh_tokens(db: Session, refresh_token: str) -> Dict[str, str]:
         "access_token": new_access_token,
         "refresh_token": refresh_token,
         "token_type": "bearer",
+        "role": user.role,
     }
 

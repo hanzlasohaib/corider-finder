@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, DateTime, String, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, String, func
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -13,6 +13,10 @@ from app.db.base import Base
 
 class User(Base):
     __tablename__ = "users"
+
+    __table_args__ = (
+        CheckConstraint("role IN ('student', 'admin')", name="ck_users_role"),
+    )
 
     id: Mapped[UUID] = mapped_column(
         PGUUID(as_uuid=True),
@@ -29,6 +33,11 @@ class User(Base):
     university: Mapped[str] = mapped_column(String(255), nullable=False)
     phone: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        server_default="student",
+    )
     is_active: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Form, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -10,6 +11,7 @@ from app.schemas.auth import TokenRefreshRequest
 from app.schemas.user import UserCreate, UserLogin, UserResponse
 from app.services.auth_service import (
     InvalidCredentialsError,
+    RoleMismatchError,
     UserAlreadyExistsError,
     authenticate_user,
     create_tokens,
@@ -52,25 +54,46 @@ async def login_user(
         content_type = request.headers.get("content-type", "")
 
         if content_type.startswith("application/json"):
-            body = await request.json()
-            email = body.get("email")
-            password = body.get("password")
+            try:
+                body = await request.json()
+            except Exception:
+                raise HTTPException(status_code=422, detail="Invalid JSON body")
+            credentials = UserLogin.model_validate(body)
+            email = credentials.email
+            password = credentials.password
+            portal = credentials.portal
         else:
             email = username
             password = password
+            portal = "student"
 
         if not email or not password:
             raise HTTPException(status_code=422, detail="Username and password required")
 
-        user = authenticate_user(db, email, password)
+        user = authenticate_user(db, email, password, portal=portal)
         tokens = create_tokens(user)
         return tokens
 
+    except ValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=exc.errors(),
+        )
     except InvalidCredentialsError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+    except RoleMismatchError as exc:
+        detail = (
+            "This account is an admin account. Open the admin portal."
+            if exc.actual_role == "admin"
+            else "This account is a student account. Open the student portal."
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=detail,
         )
 
 
